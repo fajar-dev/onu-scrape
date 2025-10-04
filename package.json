@@ -1,10 +1,9 @@
 {
-  "name": "onu_scrap_exporter",
+  "name": "onu_scrape_exporter",
   "version": "1.0.0",
   "type": "module",
   "scripts": {
     "scrape": "ts-node index.ts",
-    "dev": "ts-node --watch scraper.ts",
     "install-browser": "npx playwright install chromium"
   },
   "dependencies": {
