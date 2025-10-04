@@ -25,5 +25,5 @@ npx playwright install chromium
 
 ```bash
 # Run the application
-npm scrape
+npm run scrape
 ```
