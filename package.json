@@ -1,6 +1,6 @@
 {
-   "name": "v2",
-   "version": "0.0.1",
+   "name": "onu_scrape_exporter",
+   "version": "2.0.0",
    "description": "Awesome project developed with TypeORM.",
    "type": "commonjs",
    "devDependencies": {
