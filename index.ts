@@ -1,71 +1,119 @@
 import { chromium, type Browser, type Page } from 'playwright'
-import 'dotenv/config'
 import ora from 'ora'
+import { readFile } from 'fs/promises'
+import path from 'path'
 
-const CONFIG = {
-  loginUrl: process.env.LOGIN_URL!,
-  credentials: {
-    username: process.env.USERNAME!,
-    password: process.env.PASSWORD!
-  },
-  selectors: {
-    usernameInput: 'input[type="text"]',
-    passwordInput: 'input[type="password"]',
-    submitButton: 'button.login-submit',
-    rxValue: '.bottom-text p:nth-of-type(2) span:first-of-type'
-  }
+type Device = {
+  ip: string
+  username?: string
+  password?: string
 }
 
-async function login(page: Page): Promise<boolean> {
+const SELECTORS = {
+  usernameInput: 'input[type="text"]',
+  passwordInput: 'input[type="password"]',
+  submitButton: 'button.login-submit',
+  rxValue: '.bottom-text p:nth-of-type(2) span:first-of-type'
+}
+
+const GLOBAL = {
+  loginSuffix: '/index.html#/login',
+  dashboardSuffix: '/index.html#/'
+}
+
+function buildLoginUrl(ip: string): string {
+  return `http://${ip}${GLOBAL.loginSuffix}`
+}
+
+function deriveDashboardUrlFromLogin(loginUrl: string): string {
+  return loginUrl.replace(/#\/?login\/?$/, '#/')
+}
+
+async function loadDevices(file = 'devices.json'): Promise<Device[]> {
+  const raw = await readFile(path.resolve(process.cwd(), file), 'utf-8')
+  return JSON.parse(raw) as Device[]
+}
+
+async function login(page: Page, device: Device): Promise<boolean> {
+  const { ip, username, password } = device
+  if (!username || !password) return false
+
+  const loginUrl = buildLoginUrl(ip)
+  const dashboardUrl = deriveDashboardUrlFromLogin(loginUrl)
+
   try {
-    await page.goto(CONFIG.loginUrl)
-    await page.fill(CONFIG.selectors.usernameInput, CONFIG.credentials.username)
-    await page.fill(CONFIG.selectors.passwordInput, CONFIG.credentials.password)
-    await page.click(CONFIG.selectors.submitButton)
-    await page.waitForTimeout(1000)
-    const stillOnLogin = await page.isVisible(CONFIG.selectors.submitButton)
-    return !stillOnLogin 
+    await page.goto(loginUrl, { waitUntil: 'domcontentloaded', timeout: 10_000 })
+    await page.fill(SELECTORS.usernameInput, username)
+    await page.fill(SELECTORS.passwordInput, password)
+    await page.click(SELECTORS.submitButton)
+    await page.waitForURL(url => url.href.startsWith(dashboardUrl), { timeout: 10_000 })
+    return true
   } catch {
     return false
   }
 }
 
-
 async function scrapeData(page: Page): Promise<string | null> {
-  await page.waitForSelector(CONFIG.selectors.rxValue, { timeout: 10000 })
-  return await page.textContent(CONFIG.selectors.rxValue)
+  try {
+    await page.waitForSelector(SELECTORS.rxValue, { timeout: 10_000 })
+    const text = await page.textContent(SELECTORS.rxValue)
+    return text?.trim() ?? null
+  } catch {
+    return null
+  }
+}
+
+async function processDevice(browser: Browser, device: Device) {
+  const context = await browser.newContext()
+  const page = await context.newPage()
+  const ip = device.ip
+
+  try {
+    const ok = await login(page, device)
+    if (!ok) return { ip, success: false, rx: null }
+
+    const rxValue = await scrapeData(page)
+    return { ip, success: !!rxValue, rx: rxValue ?? null }
+  } catch {
+    return { ip, success: false, rx: null }
+  } finally {
+    await page.close()
+    await context.close()
+  }
+}
+
+async function delay(ms: number) {
+  return new Promise(res => setTimeout(res, ms))
 }
 
 async function main() {
-  let browser: Browser | null = null
-  const spinner = ora()
-
+  const spinner = ora('Loading devices...').start()
   try {
-    spinner.start('Starting scraping process...')
-    browser = await chromium.launch({ headless: true })
-    const page = await browser.newPage()
+    const devices = await loadDevices()
+    spinner.succeed(`Loaded ${devices.length} devices`)
 
-    spinner.text = 'Logging in...'
-    const loginSuccess = await login(page)
+    const browser = await chromium.launch({ headless: true })
+    const results: Array<{ ip: string; success: boolean; rx: string | null }> = []
 
-    if (!loginSuccess) {
-      spinner.fail('Login failed. Scraping aborted.')
-      return
+    for (const device of devices) {
+      spinner.start(`Processing ${device.ip}`)
+      const result = await processDevice(browser, device)
+      spinner.succeed(`${device.ip} → ${result.success ? 'OK' : 'FAIL'}${result.rx ? ` | RX: ${result.rx}` : ''}`)
+      results.push(result)
+      await delay(500) // jeda singkat antar device
     }
 
-    spinner.succeed('Login successful.')
+    await browser.close()
 
-    spinner.start('Fetching RX Value...')
-    const rxValue = await scrapeData(page)
-    spinner.succeed('RX Value fetched successfully.')
-
-    console.log('\nRX Value:', rxValue ?? 'No data found')
-  } catch (error) {
-    spinner.fail('An error occurred during scraping.')
-    console.error(error)
-    process.exit(1)
+    console.log('\nSummary:')
+    for (const r of results) {
+      console.log(`${r.ip} -> ${r.success ? '✅' : '❌'} ${r.rx ?? '-'}`)
+    }
+  } catch (err) {
+    spinner.fail('Fatal error')
+    console.error((err as Error).message)
   } finally {
-    if (browser) await browser.close()
+    spinner.stop()
   }
 }
 
