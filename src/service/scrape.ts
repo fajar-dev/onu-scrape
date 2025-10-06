@@ -1,9 +1,7 @@
-import { chromium, type Browser, type Page } from 'playwright'
-import ora from 'ora'
 import { readFile } from 'fs/promises'
-import path from 'path'
+import * as path from 'path'
 
-type Device = {
+export type Device = {
   ip: string
   username?: string
   password?: string
@@ -21,20 +19,24 @@ const GLOBAL = {
   dashboardSuffix: '/index.html#/'
 }
 
-function buildLoginUrl(ip: string): string {
+export function buildLoginUrl(ip: string): string {
   return `http://${ip}${GLOBAL.loginSuffix}`
 }
 
-function deriveDashboardUrlFromLogin(loginUrl: string): string {
+export function deriveDashboardUrlFromLogin(loginUrl: string): string {
   return loginUrl.replace(/#\/?login\/?$/, '#/')
 }
 
-async function loadDevices(file = 'devices.json'): Promise<Device[]> {
+export async function delay(ms: number) {
+  return new Promise(res => setTimeout(res, ms))
+}
+
+export async function loadDevices(file = 'devices.json'): Promise<Device[]> {
   const raw = await readFile(path.resolve(process.cwd(), file), 'utf-8')
   return JSON.parse(raw) as Device[]
 }
 
-async function login(page: Page, device: Device): Promise<boolean> {
+export async function login(page, device: Device): Promise<boolean> {
   const { ip, username, password } = device
   if (!username || !password) return false
 
@@ -53,7 +55,7 @@ async function login(page: Page, device: Device): Promise<boolean> {
   }
 }
 
-async function scrapeData(page: Page): Promise<string | null> {
+export async function scrapeData(page): Promise<string | null> {
   try {
     await page.waitForSelector(SELECTORS.rxValue, { timeout: 10_000 })
     const text = await page.textContent(SELECTORS.rxValue)
@@ -63,7 +65,7 @@ async function scrapeData(page: Page): Promise<string | null> {
   }
 }
 
-async function processDevice(browser: Browser, device: Device) {
+export async function processDevice(browser, device: Device) {
   const context = await browser.newContext()
   const page = await context.newPage()
   const ip = device.ip
@@ -81,40 +83,3 @@ async function processDevice(browser: Browser, device: Device) {
     await context.close()
   }
 }
-
-async function delay(ms: number) {
-  return new Promise(res => setTimeout(res, ms))
-}
-
-async function main() {
-  const spinner = ora('Loading devices...').start()
-  try {
-    const devices = await loadDevices()
-    spinner.succeed(`Loaded ${devices.length} devices`)
-
-    const browser = await chromium.launch({ headless: true })
-    const results: Array<{ ip: string; success: boolean; rx: string | null }> = []
-
-    for (const device of devices) {
-      spinner.start(`Processing ${device.ip}`)
-      const result = await processDevice(browser, device)
-      spinner.succeed(`${device.ip} → ${result.success ? 'OK' : 'FAIL'}${result.rx ? ` | RX: ${result.rx}` : ''}`)
-      results.push(result)
-      await delay(500) // jeda singkat antar device
-    }
-
-    await browser.close()
-
-    console.log('\nSummary:')
-    for (const r of results) {
-      console.log(`${r.ip} -> ${r.success ? '✅' : '❌'} ${r.rx ?? '-'}`)
-    }
-  } catch (err) {
-    spinner.fail('Fatal error')
-    console.error((err as Error).message)
-  } finally {
-    spinner.stop()
-  }
-}
-
-main()
