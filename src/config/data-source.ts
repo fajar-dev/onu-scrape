@@ -1,7 +1,8 @@
 import "reflect-metadata"
 import { DataSource } from "typeorm"
-import { Fttx } from "../entity/Fttx"
 import * as dotenv from 'dotenv'
+import { Metrics } from "../entities/metrics.entity"
+import { Cgs } from "../entities/cgs.entity"
 dotenv.config()
 
 export const AppDataSource = new DataSource({
@@ -13,7 +14,7 @@ export const AppDataSource = new DataSource({
     database: process.env.DB_DATABASE,
     synchronize: true,
     logging: false,
-    entities: [Fttx],
+    entities: [Metrics, Cgs],
     migrations: [],
     subscribers: [],
 })
