@@ -1,6 +1,8 @@
+import { MoreThan } from 'typeorm';
 import { AppDataSource } from '../config/data-source';
 import { Cgs } from '../entities/cgs.entity';
 import { Metrics } from '../entities/metrics.entity';
+import { promises } from 'dns';
 
 export class MetricsService {
   constructor(
@@ -24,21 +26,26 @@ export class MetricsService {
 
   /**
    * Get CGS with metrics in last 1 hour.
-   * @returns {Promise<Cgs[]>} CGS list with recent metrics.
+   * @returns {Promise<Metrics[]>} CGS list with recent metrics.
    */
-  async getRecentMetrics(): Promise<Cgs[]> {
-    const now = new Date();
-    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-
-    const cgsWithMetrics = await this.cgsRepository
-      .createQueryBuilder('cgs')
-      .leftJoinAndSelect('cgs.metrics', 'metrics')
-      .where('metrics.createdAt BETWEEN :from AND :to', {
-        from: oneHourAgo,
-        to: now,
+  async getRecentMetricsRaw(): Promise<Metrics[]> {
+    const metrics = await this.metricsRepository
+      .createQueryBuilder('metric')
+      .leftJoinAndSelect('metric.cgs', 'cgs')
+      .where('metric.createdAt >= NOW() - INTERVAL 1 HOUR')
+      .andWhere('cgs.onuIp IS NOT NULL')
+      .andWhere((qb) => {
+        const subQuery = qb
+          .subQuery()
+          .select('MAX(m2.id)')
+          .from('metrics', 'm2')
+          .leftJoin('m2.cgs', 'cgs2')
+          .where('cgs2.onuIp IS NOT NULL')
+          .groupBy('cgs2.onuIp')
+          .getQuery();
+        return 'metric.id IN ' + subQuery;
       })
       .getMany();
-
-    return cgsWithMetrics;
+    return metrics;
   }
 }

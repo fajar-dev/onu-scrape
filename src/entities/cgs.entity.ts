@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, UpdateDateColumn, Index, Unique } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, UpdateDateColumn, Index, Unique, OneToMany } from 'typeorm';
+import { Metrics } from './metrics.entity';
 
 @Entity('cgs')
 @Unique('uq_service_onu', ['serviceId', 'onuIp'])
@@ -29,4 +30,7 @@ export class Cgs {
         onUpdate: 'CURRENT_TIMESTAMP',
     })
     updatedAt: Date;
+
+    @OneToMany(() => Metrics, m => m.cgs)
+    metrics: Metrics[];
 }

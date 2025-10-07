@@ -1,4 +1,5 @@
 import { chromium } from 'playwright';
+import pLimit from 'p-limit';
 import { MetricsService } from '../services/metrics.service';
 import { ScraperService } from '../services/scraper.service';
 
@@ -11,10 +12,6 @@ export class FttxScraper {
     this.scraperService = new ScraperService();
   }
 
-  /**
-   * Run continuous scraping loop with minimal logs.
-   * @returns {Promise<void>}
-   */
   async start(): Promise<void> {
     console.log('🚀 FTTX Scraper started');
 
@@ -22,18 +19,25 @@ export class FttxScraper {
       const devices = await this.scraperService.getDevicesFromDb();
       const browser = await chromium.launch({ headless: true });
 
-      for (const device of devices) {
-        const result = await this.scraperService.processDevice(browser, device);
+      const limit = pLimit(10);
 
-        if (result.success && result.rx) {
-          console.log(`✅ ${device.ip} → ${result.rx} dBm`);
-          await this.metricsService.store(result.ip, parseFloat(result.rx));
-        } else {
-          console.log(`⚠️  ${device.ip} → failed`);
-        }
+      await Promise.all(
+        devices.map((device) =>
+          limit(async () => {
+            const result = await this.scraperService.processDevice(browser, device);
 
-        await this.scraperService.delay(500);
-      }
+            if (result.success && result.rx) {
+              console.log(`✅ ${device.ip} → ${result.rx} dBm`);
+              await this.metricsService.store(result.ip, parseFloat(result.rx));
+            } else {
+              console.log(`⚠️  ${device.ip} → failed`);
+            }
+
+            await this.scraperService.delay(500);
+          })
+        )
+      );
+
       await browser.close();
       await this.scraperService.delay(10_000);
     }

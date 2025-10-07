@@ -1,6 +1,7 @@
-import { chromium, type Browser, type Page } from 'playwright';
+import { type Browser, type Page } from 'playwright';
 import { AppDataSource } from '../config/data-source';
 import { Cgs } from '../entities/cgs.entity';
+import { IsNull, Not } from 'typeorm';
 
 export type Device = {
   ip: string;
@@ -32,7 +33,10 @@ export class ScraperService {
    * @returns {Promise<Device[]>} List of devices.
    */
   async getDevicesFromDb(): Promise<Device[]> {
-    const records = await this.cgsRepository.find({ select: ['onuIp'] });
+    const records = await this.cgsRepository.find({
+        select: ['onuIp'],
+        where: { onuIp: Not(IsNull()) },
+      });
     return records.map(r => ({
       ip: r.onuIp,
       username: CREDENTIALS.username,

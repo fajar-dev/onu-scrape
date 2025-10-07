@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, JoinColumn, ManyToOne } from 'typeorm';
+import { Cgs } from './cgs.entity';
 
 @Entity('metrics')
 export class Metrics {
@@ -18,4 +19,8 @@ export class Metrics {
         onUpdate: 'CURRENT_TIMESTAMP',
     })
     createdAt: Date;
+
+    @ManyToOne(() => Cgs, cgs => cgs.metrics)
+    @JoinColumn({ name: 'onu_ip', referencedColumnName: 'onuIp' })
+    cgs: Cgs;
 }
