@@ -1,7 +1,7 @@
 {
    "name": "onu_scrape_exporter",
    "version": "2.0.0",
-   "description": "Awesome project developed with TypeORM.",
+   "description": "Automation tool to retrieve RX optical power (dBm) data from FTTX ONU devices",
    "type": "commonjs",
    "devDependencies": {
       "@types/express": "^5.0.3",
@@ -21,8 +21,7 @@
    },
    "scripts": {
       "start": "ts-node src/index.ts",
-      "typeorm": "typeorm-ts-node-commonjs",
-      "migration:run": "typeorm-ts-node-commonjs migration:run -d src/config/data-source.ts",
-      "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/config/data-source.ts"
+      "build": "tsc",
+      "start:prod": "node dist/index.js"
    }
 }
