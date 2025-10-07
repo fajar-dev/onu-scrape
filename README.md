@@ -88,7 +88,7 @@ fttx_rx_power{cid="WMDNMAN202507227H", sid="63818"} -15.23
 ```
 
 **Labels:**
-- `cid`: Customer ID or device identifier
+- `cid`: Operator CID or device identifier
 - `sid`: Service ID or port identifier
 
 **Value:** RX optical power in dBm (lower/more negative values indicate weaker signal)
@@ -120,7 +120,7 @@ fttx_rx_power
 # Devices with weak signal (< -25 dBm)
 fttx_rx_power < -25
 
-# Average RX power by customer
+# Average RX power by operator cid
 avg(fttx_rx_power) by (cid)
 ```
 
