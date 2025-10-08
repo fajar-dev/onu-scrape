@@ -34,14 +34,20 @@ export class ScraperService {
    */
   async getDevicesFromDb(): Promise<Device[]> {
     const records = await this.cgsRepository.find({
-        select: ['onuIp'],
-        where: { onuIp: Not(IsNull()) },
-      })
-    return records.map(r => ({
-      ip: r.onuIp,
-      username: CREDENTIALS.username,
-      password: CREDENTIALS.password,
-    }))
+      select: ['onuIp'],
+      where: { 
+        onuIp: Not(IsNull()) 
+      },
+    });
+
+    return records
+      .map(r => r.onuIp?.toString())
+      .filter(ip => ip && ip.trim() !== '')
+      .map(ip => ({
+        ip,
+        username: CREDENTIALS.username,
+        password: CREDENTIALS.password,
+      }));
   }
 
   /**
