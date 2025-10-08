@@ -17,12 +17,14 @@ export class FttxScraper {
 
     while (true) {
       const devices = await this.scraperService.getDevicesFromDb();
-      const browser = await chromium.launch({ headless: true });
+      const validDevices = devices.filter(device => device.ip !== null && device.ip !== '');
+      console.log(`Fetched ${validDevices.length} devices with valid IPs`);
 
+      const browser = await chromium.launch({ headless: true });
       const limit = pLimit(10);
 
       await Promise.all(
-        devices.map((device) =>
+        validDevices.map((device) =>
           limit(async () => {
             const result = await this.scraperService.processDevice(browser, device);
 
