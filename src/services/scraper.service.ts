@@ -1,27 +1,27 @@
-import { type Browser, type Page } from 'playwright';
-import { AppDataSource } from '../config/data-source';
-import { Cgs } from '../entities/cgs.entity';
-import { IsNull, Not } from 'typeorm';
+import { type Browser, type Page } from 'playwright'
+import { AppDataSource } from '../config/data-source'
+import { Cgs } from '../entities/cgs.entity'
+import { IsNull, Not } from 'typeorm'
 
 export type Device = {
-  ip: string;
-  username: string;
-  password: string;
-};
+  ip: string
+  username: string
+  password: string
+}
 
-const CREDENTIALS = { username: 'admin', password: 'admin' };
+const CREDENTIALS = { username: 'admin', password: 'admin' }
 
 const SELECTORS = {
   usernameInput: 'input[type="text"]',
   passwordInput: 'input[type="password"]',
   submitButton: 'button.login-submit',
   rxValue: '.bottom-text p:nth-of-type(2) span:first-of-type',
-};
+}
 
 const GLOBAL = {
   loginSuffix: '/index.html#/login',
   dashboardSuffix: '/index.html#/',
-};
+}
 
 export class ScraperService {
   constructor(
@@ -36,12 +36,12 @@ export class ScraperService {
     const records = await this.cgsRepository.find({
         select: ['onuIp'],
         where: { onuIp: Not(IsNull()) },
-      });
+      })
     return records.map(r => ({
       ip: r.onuIp,
       username: CREDENTIALS.username,
       password: CREDENTIALS.password,
-    }));
+    }))
   }
 
   /**
@@ -50,7 +50,7 @@ export class ScraperService {
    * @returns {string} Login URL.
    */
   private buildLoginUrl(ip: string): string {
-    return `http://${ip}${GLOBAL.loginSuffix}`;
+    return `http://${ip}${GLOBAL.loginSuffix}`
   }
 
   /**
@@ -59,7 +59,7 @@ export class ScraperService {
    * @returns {string} Dashboard URL.
    */
   private deriveDashboardUrl(ip: string): string {
-    return `http://${ip}${GLOBAL.dashboardSuffix}`;
+    return `http://${ip}${GLOBAL.dashboardSuffix}`
   }
 
   /**
@@ -69,16 +69,16 @@ export class ScraperService {
    * @returns {Promise<boolean>} True if login succeeds.
    */
   private async login(page: Page, device: Device): Promise<boolean> {
-    const { ip, username, password } = device;
+    const { ip, username, password } = device
     try {
-      await page.goto(this.buildLoginUrl(ip), { waitUntil: 'domcontentloaded', timeout: 10_000 });
-      await page.fill(SELECTORS.usernameInput, username);
-      await page.fill(SELECTORS.passwordInput, password);
-      await page.click(SELECTORS.submitButton);
-      await page.waitForURL(url => url.href.startsWith(this.deriveDashboardUrl(ip)), { timeout: 10_000 });
-      return true;
+      await page.goto(this.buildLoginUrl(ip), { waitUntil: 'domcontentloaded', timeout: 10_000 })
+      await page.fill(SELECTORS.usernameInput, username)
+      await page.fill(SELECTORS.passwordInput, password)
+      await page.click(SELECTORS.submitButton)
+      await page.waitForURL(url => url.href.startsWith(this.deriveDashboardUrl(ip)), { timeout: 10_000 })
+      return true
     } catch {
-      return false;
+      return false
     }
   }
 
@@ -89,11 +89,11 @@ export class ScraperService {
    */
   private async scrapeData(page: Page): Promise<string | null> {
     try {
-      await page.waitForSelector(SELECTORS.rxValue, { timeout: 10_000 });
-      const text = await page.textContent(SELECTORS.rxValue);
-      return text?.trim() ?? null;
+      await page.waitForSelector(SELECTORS.rxValue, { timeout: 10_000 })
+      const text = await page.textContent(SELECTORS.rxValue)
+      return text?.trim() ?? null
     } catch {
-      return null;
+      return null
     }
   }
 
@@ -101,24 +101,24 @@ export class ScraperService {
    * Process one device (login + scrape).
    * @param {Browser} browser - Playwright browser.
    * @param {Device} device - Device info.
-   * @returns {Promise<{ip:string; success:boolean; rx:string|null}>} Result data.
+   * @returns {Promise<{ip:string success:boolean rx:string|null}>} Result data.
    */
   async processDevice(browser: Browser, device: Device) {
-    const context = await browser.newContext();
-    const page = await context.newPage();
-    const ip = device.ip;
+    const context = await browser.newContext()
+    const page = await context.newPage()
+    const ip = device.ip
 
     try {
-      const ok = await this.login(page, device);
-      if (!ok) return { ip, success: false, rx: null };
+      const ok = await this.login(page, device)
+      if (!ok) return { ip, success: false, rx: null }
 
-      const rxValue = await this.scrapeData(page);
-      return { ip, success: !!rxValue, rx: rxValue ?? null };
+      const rxValue = await this.scrapeData(page)
+      return { ip, success: !!rxValue, rx: rxValue ?? null }
     } catch {
-      return { ip, success: false, rx: null };
+      return { ip, success: false, rx: null }
     } finally {
-      await page.close();
-      await context.close();
+      await page.close()
+      await context.close()
     }
   }
 
@@ -128,6 +128,6 @@ export class ScraperService {
    * @returns {Promise<void>} After delay.
    */
   async delay(ms: number) {
-    return new Promise(res => setTimeout(res, ms));
+    return new Promise(res => setTimeout(res, ms))
   }
 }

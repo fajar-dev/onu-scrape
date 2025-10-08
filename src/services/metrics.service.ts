@@ -1,8 +1,7 @@
-import { MoreThan } from 'typeorm';
-import { AppDataSource } from '../config/data-source';
-import { Cgs } from '../entities/cgs.entity';
-import { Metrics } from '../entities/metrics.entity';
-import { promises } from 'dns';
+import { MoreThan } from 'typeorm'
+import { AppDataSource } from '../config/data-source'
+import { Cgs } from '../entities/cgs.entity'
+import { Metrics } from '../entities/metrics.entity'
 
 export class MetricsService {
   constructor(
@@ -20,8 +19,8 @@ export class MetricsService {
     const record = this.metricsRepository.create({ 
       onuIp,
       rx
-    });
-    await this.metricsRepository.save(record);
+    })
+    await this.metricsRepository.save(record)
   }
 
   /**
@@ -42,10 +41,10 @@ export class MetricsService {
           .leftJoin('m2.cgs', 'cgs2')
           .where('cgs2.onuIp IS NOT NULL')
           .groupBy('cgs2.onuIp')
-          .getQuery();
-        return 'metric.id IN ' + subQuery;
+          .getQuery()
+        return 'metric.id IN ' + subQuery
       })
-      .getMany();
-    return metrics;
+      .getMany()
+    return metrics
   }
 }

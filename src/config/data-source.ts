@@ -1,8 +1,8 @@
-import "reflect-metadata"
-import { DataSource } from "typeorm"
+import 'reflect-metadata'
+import { DataSource } from 'typeorm'
 import * as dotenv from 'dotenv'
-import { Metrics } from "../entities/metrics.entity"
-import { Cgs } from "../entities/cgs.entity"
+import { Metrics } from '../entities/metrics.entity'
+import { Cgs } from '../entities/cgs.entity'
 dotenv.config()
 
 export const AppDataSource = new DataSource({

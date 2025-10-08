@@ -1,5 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, UpdateDateColumn, Index, Unique, OneToMany } from 'typeorm';
-import { Metrics } from './metrics.entity';
+import { Entity, PrimaryGeneratedColumn, Column, UpdateDateColumn, Index, Unique, OneToMany } from 'typeorm'
+import { Metrics } from './metrics.entity'
 
 @Entity('cgs')
 @Unique('uq_service_onu', ['serviceId', 'onuIp'])
@@ -7,13 +7,13 @@ import { Metrics } from './metrics.entity';
 @Index('idx_onu_ip', ['onuIp'])
 export class Cgs {
     @PrimaryGeneratedColumn({ type: 'bigint', unsigned: true })
-    id: number;
+    id: number
 
     @Column({ name: 'service_id', type: 'bigint', unsigned: true })
-    serviceId: number;
+    serviceId: number
 
-    @Column({ name: 'onu_ip', type: 'varbinary', length: 16 })
-    onuIp: string;
+    @Column({ name: 'onu_ip', type: 'varbinary', length: 16, nullable:true })
+    onuIp: string
 
     @Column({
         name: 'operator_cid',
@@ -21,7 +21,7 @@ export class Cgs {
         length: 64,
         collation: 'utf8mb4_general_ci',
     })
-    operatorCid: string;
+    operatorCid: string
 
     @UpdateDateColumn({
         name: 'updated_at',
@@ -29,8 +29,8 @@ export class Cgs {
         default: () => 'CURRENT_TIMESTAMP',
         onUpdate: 'CURRENT_TIMESTAMP',
     })
-    updatedAt: Date;
+    updatedAt: Date
 
     @OneToMany(() => Metrics, m => m.cgs)
-    metrics: Metrics[];
+    metrics: Metrics[]
 }
