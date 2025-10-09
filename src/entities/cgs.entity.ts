@@ -20,6 +20,7 @@ export class Cgs {
         type: 'varchar',
         length: 64,
         collation: 'utf8mb4_general_ci',
+        nullable: true
     })
     operatorCid: string
 

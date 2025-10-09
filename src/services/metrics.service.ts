@@ -1,4 +1,4 @@
-import { MoreThan } from 'typeorm'
+import { IsNull, MoreThan, Not } from 'typeorm'
 import { AppDataSource } from '../config/data-source'
 import { Cgs } from '../entities/cgs.entity'
 import { Metrics } from '../entities/metrics.entity'
@@ -24,6 +24,18 @@ export class MetricsService {
   }
 
   /**
+   * Ambil daftar ONU dari database (IP valid, bukan null/kosong)
+   * @returns {Promise<Cgs[]>} CGS list.
+   */
+  async getDevicesFromDb(): Promise<Cgs[]> {
+    const records = await this.cgsRepository.find({
+      select: ['id', 'onuIp'],
+      where: { onuIp: Not(IsNull()) },
+    })
+    return records
+  }
+
+  /**
    * Get CGS with metrics in last 1 hour.
    * @returns {Promise<Metrics[]>} CGS list with recent metrics.
    */
@@ -44,6 +56,7 @@ export class MetricsService {
           .getQuery()
         return 'metric.id IN ' + subQuery
       })
+      .orderBy('cgs.serviceId', 'ASC')
       .getMany()
     return metrics
   }
