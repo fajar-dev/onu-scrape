@@ -28,7 +28,7 @@ export class ScraperAService {
     try {
       await page.goto(this.buildLoginUrl(ip), {
         waitUntil: 'domcontentloaded',
-        timeout: 10_000,
+        timeout: 15_000,
       })
 
       if (!page.url().includes(GLOBAL.loginSuffix)) return false

@@ -4,18 +4,22 @@ import { MetricsService } from '../services/metrics.service'
 import { ScraperAService } from '../services/scraperA.service'
 import { ScraperBService } from '../services/scraperB.service'
 import { ScraperCService } from '../services/scraperC.service'
+import { ScraperDService } from '../services/scraperD.service'
+import { Cgs } from '../entities/cgs.entity'
 
 export class FttxScraper {
   private metricsService: MetricsService
   private scraperA: ScraperAService
   private scraperB: ScraperBService
   private scraperC: ScraperCService
+  private scraperD: ScraperDService
 
   constructor() {
     this.metricsService = new MetricsService()
     this.scraperA = new ScraperAService()
     this.scraperB = new ScraperBService()
     this.scraperC = new ScraperCService()
+    this.scraperD = new ScraperDService()
   }
 
   async start(): Promise<void> {
@@ -25,6 +29,25 @@ export class FttxScraper {
       try {
         const devices = await this.metricsService.getDevicesFromDb()
         const validDevices = devices.filter(d => d.onuIp && d.onuIp !== '')
+        // const validDevices: Cgs[] = [
+        //   {
+        //     id: 'debug-1',
+        //     onuIp: Buffer.from('172.16.15.181'),
+        //     serviceId: null,
+        //     operatorCid: null,
+        //     metricsts: null,
+        //     updatedAt: new Date(),
+        //   } as unknown as Cgs,
+        //   {
+        //     id: 'debug-2',
+        //     onuIp: Buffer.from('172.16.3.62'),
+        //     serviceId: null,
+        //     operatorCid: null,
+        //     metricsts: null,
+        //     updatedAt: new Date(),
+        //   } as unknown as Cgs,
+        // ]
+        // console.log(validDevices)
         console.log(`📡 ${validDevices.length} devices with valid IPs`)
 
         const browser = await chromium.launch({ headless: true })
@@ -41,6 +64,10 @@ export class FttxScraper {
 
               if (!result.success) {
                 result = await this.scraperC.processDevice(browser, device)
+              }
+
+              if (!result.success) {
+                result = await this.scraperD.processDevice(browser, device)
               }
 
               if (result.success && result.rx) {

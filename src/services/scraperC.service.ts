@@ -29,7 +29,7 @@ export class ScraperCService {
     try {
       await page.goto(this.buildLoginUrl(ip), {
         waitUntil: 'domcontentloaded',
-        timeout: 10_000,
+        timeout: 15_000,
       })
 
       if (page.url().endsWith(GLOBAL.dashboardSuffix)) {
