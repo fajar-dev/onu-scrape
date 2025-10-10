@@ -14,6 +14,17 @@ export class ScraperBService {
     return `http://${ip}${GLOBAL.eponSuffix}`
   }
 
+  private async disableAutoRefresh(page: Page) {
+    try {
+      await page.evaluate(() => {
+        const metas = document.querySelectorAll('meta[http-equiv="refresh"]')
+        metas.forEach(m => m.remove())
+      })
+    } catch (e) {
+      console.warn('Gagal menonaktifkan auto-refresh:', e)
+    }
+  }
+
   private async scrapeRxPower(page: Page): Promise<string | null> {
     try {
       await page.waitForSelector(SELECTORS.rxPower, { timeout: 10_000 })
@@ -33,6 +44,7 @@ export class ScraperBService {
 
     try {
       const targetUrl = this.buildStatusUrl(ip)
+
       const response = await page.goto(targetUrl, {
         waitUntil: 'domcontentloaded',
         timeout: 10_000,
@@ -46,9 +58,14 @@ export class ScraperBService {
         return { id: record.id, ip, success: false, rx: null }
       }
 
+      await this.disableAutoRefresh(page)
+
+      await this.delay(1000)
+
       const rxValue = await this.scrapeRxPower(page)
+
       return { id: record.id, ip, success: !!rxValue, rx: rxValue ?? null }
-    } catch {
+    } catch (e) {
       return { id: record.id, ip, success: false, rx: null }
     } finally {
       await page.close()
