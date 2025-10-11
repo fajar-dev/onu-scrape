@@ -1,13 +1,12 @@
 import * as express from 'express'
+import * as cron from 'node-cron'
 import { AppDataSource } from './config/data-source'
 import { FttxScraper } from './core/fttx-scraper'
 import { MetricsController } from './controllers/metrics.controller'
 
 async function main() {
-    // Initialize database
     await AppDataSource.initialize()
 
-    // Start Express server
     const app = express()
     const port = process.env.PORT || 3000
     const metricsController = new MetricsController()
@@ -16,14 +15,21 @@ async function main() {
         metricsController.getMetrics(req, res)
     )
 
-    app.listen(port, () => {
-        console.log(`✅ Server running on port ${port}`)
-    })
+    app.listen(port, () => console.log(`Server running on port ${port}`))
 
-    // Start scraper loop (headless)
     const scraper = new FttxScraper()
-    await scraper.start()
+    let isScraping = false
+
+    const runScraper = async () => {
+        if (isScraping) return
+        isScraping = true
+
+        await scraper.start()
+        isScraping = false
+        console.log(" Scrape end ")
+    }
+
+  cron.schedule('*/10 * * * *', runScraper)
 }
 
-// Run main
-main().catch(() => process.exit(1))
+main()
