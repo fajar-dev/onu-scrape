@@ -18,7 +18,9 @@
       "p-limit": "^7.1.1",
       "playwright": "^1.55.1",
       "reflect-metadata": "^0.2.2",
-      "typeorm": "0.3.27"
+      "typeorm": "0.3.27",
+      "winston": "^3.18.3",
+      "winston-daily-rotate-file": "^5.0.0"
    },
    "scripts": {
       "start": "ts-node src/index.ts",

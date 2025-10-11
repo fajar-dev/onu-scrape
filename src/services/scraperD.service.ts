@@ -1,5 +1,6 @@
 import { type Browser, type Page } from 'playwright'
 import { Cgs } from '../entities/cgs.entity'
+import logger from '../config/logger'
 
 const CREDENTIALS = { username: 'admin', password: 'super&123' }
 
@@ -49,12 +50,28 @@ export class ScraperDService {
         return true
       }
 
-      if (url.endsWith('/') || url.includes(GLOBAL.formLoginPath)) {
-        return true
+      if (url.includes(GLOBAL.formLoginPath)) {
+        if (
+          html.includes('ERROR:bad password!') ||
+          html.includes('ERROR:invalid username!')
+        ) {
+          logger.error(`⚠️ ${ip} → Auth Failed`)
+          console.log(`❌ [${ip}] Auth failed`)
+          return false
+        }
+
+        const okButton = await page.$('input[type="button"][name="OK"]')
+        if (okButton) {
+          await Promise.allSettled([
+            page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 10000 }),
+            okButton.click(),
+          ])
+          return true
+        }
       }
 
       return false
-    } catch (err) {
+    } catch {
       return false
     }
   }

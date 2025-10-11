@@ -1,5 +1,6 @@
 import { type Browser, type Page } from 'playwright'
 import { Cgs } from '../entities/cgs.entity'
+import logger from '../config/logger'
 
 const CREDENTIALS = { username: 'admin', password: 'super&123' }
 
@@ -32,6 +33,7 @@ export class ScraperCService {
         timeout: 15_000,
       })
 
+      // Jika sudah di dashboard
       if (page.url().endsWith(GLOBAL.dashboardSuffix)) {
         return true
       }
@@ -41,6 +43,7 @@ export class ScraperCService {
         return true
       }
 
+      // Pastikan di halaman login
       if (!page.url().includes(GLOBAL.loginSuffix)) return false
 
       await page.waitForSelector(SELECTORS.usernameInput, { timeout: 5_000 })
@@ -57,20 +60,33 @@ export class ScraperCService {
 
       const newUrl = page.url()
       const newHtml = await page.content()
+
+      if (newUrl.includes(GLOBAL.formLoginPath)) {
+        if (
+          newHtml.includes('ERROR:bad password!') ||
+          newHtml.includes('ERROR:invalid username!')
+        ) {
+          logger.error(`⚠️ ${ip} → Auth Failed`)
+          console.log(`❌ [${ip}] Auth failed`)
+          return false
+        }
+
+        if (newHtml.includes('you have logined')) {
+          const okButton = await page.$('input[type="button"][name="OK"]')
+          if (okButton) {
+            await Promise.allSettled([
+              page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 10_000 }),
+              okButton.click(),
+            ])
+          }
+          return true
+        }
+      }
+
       if (newUrl.endsWith(GLOBAL.dashboardSuffix)) {
         return true
       }
 
-      if (newUrl.includes(GLOBAL.formLoginPath) && newHtml.includes('you have logined')) {
-        const okButton = await page.$('input[type="button"][name="OK"]')
-        if (okButton) {
-          await Promise.allSettled([
-            page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 10_000 }),
-            okButton.click(),
-          ])
-        }
-        return true
-      }
       return false
     } catch {
       return false

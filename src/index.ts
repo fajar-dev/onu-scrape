@@ -29,7 +29,7 @@ async function main() {
         console.log(" Scrape end ")
     }
 
-  cron.schedule('*/10 * * * *', runScraper)
+  cron.schedule('*/30 * * * *', runScraper)
 }
 
 main()

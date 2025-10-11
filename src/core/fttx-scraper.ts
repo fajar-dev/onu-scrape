@@ -6,6 +6,7 @@ import { ScraperBService } from '../services/scraperB.service'
 import { ScraperCService } from '../services/scraperC.service'
 import { ScraperDService } from '../services/scraperD.service'
 import { Cgs } from '../entities/cgs.entity'
+import logger from '../config/logger'
 
 export class FttxScraper {
   private metricsService: MetricsService
@@ -47,7 +48,8 @@ export class FttxScraper {
               await this.metricsService.store(result.ip, parseFloat(result.rx))
               console.log(`✅ ${result.ip} → ${result.rx} dBm`)
             } else {
-              console.log(`⚠️ ${result.ip} → failed`)
+              logger.error(`⚠️ ${result.ip} → Failed`)
+              console.log(`⚠️ ${result.ip} → Failed`)
             }
 
             await this.scraperA.delay(500)

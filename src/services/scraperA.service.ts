@@ -1,5 +1,6 @@
 import { type Browser, type Page } from 'playwright'
 import { Cgs } from '../entities/cgs.entity'
+import logger from '../config/logger'
 
 const CREDENTIALS = { username: 'admin', password: 'admin' }
 
@@ -7,6 +8,7 @@ const SELECTORS = {
   usernameInput: 'input[type="text"]',
   passwordInput: 'input[type="password"]',
   submitButton: 'button.login-submit',
+  errorMessage: '.login-form-item p',
   rxValue: '.bottom-text p:nth-of-type(2) span:first-of-type',
 }
 
@@ -41,12 +43,27 @@ export class ScraperAService {
       await page.fill(SELECTORS.passwordInput, CREDENTIALS.password)
       await page.click(SELECTORS.submitButton)
 
-      await page.waitForURL(
+      const errorPromise = page.waitForSelector(SELECTORS.errorMessage, { timeout: 3000 }).catch(() => null)
+      const dashboardPromise = page.waitForURL(
         url => url.href.startsWith(this.deriveDashboardUrl(ip)),
         { timeout: 10_000 }
-      )
+      ).catch(() => null)
 
-      return true
+      const result = await Promise.race([errorPromise, dashboardPromise])
+
+      if (result && 'textContent' in result) {
+        const text = (await result.textContent())?.trim()
+        if (text && text.toLowerCase().includes('username or password error')) {
+          logger.error(`❌ ${result.ip} → Auth failed`)
+          return false
+        }
+      }
+
+      if (page.url().startsWith(this.deriveDashboardUrl(ip))) {
+        return true
+      }
+
+      return false
     } catch {
       return false
     }
