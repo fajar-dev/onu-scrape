@@ -24,21 +24,18 @@ export class ScraperDService {
       const loginUrl = this.buildLoginUrl(ip)
       await page.goto(loginUrl, { waitUntil: 'domcontentloaded', timeout: 15000 })
 
-      // Jika sudah di dashboard (tanpa form login)
       if (!(await page.$('form[name="cmlogin"]'))) {
         const html = await page.content()
         if (html.includes('PON Status') || html.includes('Logout')) return true
         return false
       }
 
-      // Isi form login
       await page.fill('input[name="username"]', CREDENTIALS.username)
       await page.fill('input[name="password"]', CREDENTIALS.password)
 
       const loginButton = await page.$('input[name="save"]')
       if (!loginButton) return false
 
-      // Klik login dan tunggu redirect
       await Promise.all([
         page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => null),
         loginButton.click(),
@@ -49,7 +46,6 @@ export class ScraperDService {
       const html = await page.content()
       const url = page.url()
 
-      // ✅ Deteksi login sukses
       if (html.includes('PON Status') || url.includes('status_pon.asp') || html.includes('Logout')) {
         return true
       }
