@@ -25,68 +25,39 @@ export class FttxScraper {
   async start(): Promise<void> {
     console.log('🚀 FTTX Scraper started')
 
-    while (true) {
-      try {
-        const devices = await this.metricsService.getDevicesFromDb()
-        const validDevices = devices.filter(d => d.onuIp && d.onuIp !== '')
-        // const validDevices: Cgs[] = [
-        //   {
-        //     id: 'debug-1',
-        //     onuIp: Buffer.from('172.16.15.181'),
-        //     serviceId: null,
-        //     operatorCid: null,
-        //     metricsts: null,
-        //     updatedAt: new Date(),
-        //   } as unknown as Cgs,
-        //   {
-        //     id: 'debug-2',
-        //     onuIp: Buffer.from('172.16.3.62'),
-        //     serviceId: null,
-        //     operatorCid: null,
-        //     metricsts: null,
-        //     updatedAt: new Date(),
-        //   } as unknown as Cgs,
-        // ]
-        // console.log(validDevices)
-        console.log(`📡 ${validDevices.length} devices with valid IPs`)
+    try {
+      const devices = await this.metricsService.getDevicesFromDb()
+      const validDevices = devices.filter(d => d.onuIp && d.onuIp !== '')
+      console.log(`📡 ${validDevices.length} devices with valid IPs`)
 
-        const browser = await chromium.launch({ headless: true })
-        const limit = pLimit(10)
+      if (validDevices.length === 0) return
 
-        await Promise.all(
-          validDevices.map(device =>
-            limit(async () => {
-              let result = await this.scraperA.processDevice(browser, device)
+      const browser = await chromium.launch({ headless: true })
+      const limit = pLimit(10)
 
-              if (!result.success) {
-                result = await this.scraperB.processDevice(browser, device)
-              }
+      await Promise.all(
+        validDevices.map(device =>
+          limit(async () => {
+            let result = await this.scraperA.processDevice(browser, device)
+            if (!result.success) result = await this.scraperB.processDevice(browser, device)
+            if (!result.success) result = await this.scraperC.processDevice(browser, device)
+            if (!result.success) result = await this.scraperD.processDevice(browser, device)
 
-              if (!result.success) {
-                result = await this.scraperC.processDevice(browser, device)
-              }
+            if (result.success && result.rx) {
+              await this.metricsService.store(result.ip, parseFloat(result.rx))
+              console.log(`✅ ${result.ip} → ${result.rx} dBm`)
+            } else {
+              console.log(`⚠️ ${result.ip} → failed`)
+            }
 
-              if (!result.success) {
-                result = await this.scraperD.processDevice(browser, device)
-              }
-
-              if (result.success && result.rx) {
-                await this.metricsService.store(result.ip, parseFloat(result.rx))
-                console.log(`✅ ${result.ip} → ${result.rx} dBm`)
-              } else {
-                console.log(`⚠️ ${result.ip} → failed`)
-              }
-
-              await this.scraperA.delay(500)
-            })
-          )
+            await this.scraperA.delay(500)
+          })
         )
+      )
 
-        await browser.close()
-        await this.scraperA.delay(10_000)
-      } catch {
-        await this.scraperA.delay(30_000)
-      }
+      await browser.close()
+    } catch (err) {
+      console.error('❌ Scraper error:', err)
     }
   }
 }

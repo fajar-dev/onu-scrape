@@ -27,13 +27,16 @@ export class MetricsService {
    * Ambil daftar ONU dari database (IP valid, bukan null/kosong)
    * @returns {Promise<Cgs[]>} CGS list.
    */
-  async getDevicesFromDb(): Promise<Cgs[]> {
-    const records = await this.cgsRepository.find({
-      select: ['id', 'onuIp'],
-      where: { onuIp: Not(IsNull()) },
-    })
-    return records
-  }
+    async getDevicesFromDb(): Promise<Cgs[]> {
+      const records = await this.cgsRepository
+        .createQueryBuilder('cgs')
+        .select(['cgs.id', 'cgs.onuIp'])
+        .where('cgs.onuIp IS NOT NULL')
+        .andWhere('cgs.updatedAt >= NOW() - INTERVAL 24 HOUR')
+        .getMany()
+
+      return records
+    }
 
   /**
    * Get CGS with metrics in last 1 hour.
@@ -43,7 +46,7 @@ export class MetricsService {
     const metrics = await this.metricsRepository
       .createQueryBuilder('metric')
       .leftJoinAndSelect('metric.cgs', 'cgs')
-      .where('metric.createdAt >= NOW() - INTERVAL 1 HOUR')
+      .where('metric.createdAt >= NOW() - INTERVAL 2 HOUR')
       .andWhere('cgs.onuIp IS NOT NULL')
       .andWhere((qb) => {
         const subQuery = qb
